@@ -7,3 +7,5 @@ services:
     env_file: .env
     restart: unless-stopped
     command: npm run start
+    environment:
+      - DOCKER_BUILDKIT=1
