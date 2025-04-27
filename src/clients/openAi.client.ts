@@ -37,6 +37,12 @@ export const getPurchase = async (input: string) => {
   // @ts-ignore
   const expenses = JSON.parse(response.choices[0].message.tool_calls[0].function.arguments).expenses;
 
+  if (!expenses.length) {
+    log.warn('No purchases');
+
+    return [];
+  }
+
   const convertedExpenses = convertToKZT(expenses);
 
   log.info(convertedExpenses, 'Purchases parsed');

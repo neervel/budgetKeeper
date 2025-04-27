@@ -1,7 +1,5 @@
-import { purchaseTool } from './tools/purchase';
-import { getPurchase } from './clients/openAi.client';
 import { bot } from './clients/telegram.client';
-import { notionClient } from './clients/notion.client';
+import { telegramConfig } from './config/telegram.config';
 
 bot.launch();
 
