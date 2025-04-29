@@ -7,8 +7,20 @@ import { generateExpensesMessage } from '../utils/generateExpensesMessage';
 import { writePurchasesToDb } from './notion.client';
 import { parseAudioMessage } from '../utils/parseAudioMessage';
 import { checkAllowedChat } from '../utils/checkAllowedChat';
+import { callback } from 'telegraf/typings/button';
+import { usersStates } from '../tools/usersStates';
+import { channel } from 'node:diagnostics_channel';
 
 export const bot = new Telegraf(telegramConfig.token);
+
+const replyExtra = {
+  reply_markup: {
+    inline_keyboard: [[
+      { callback_data: 'add_purchase', text: 'Все верно ✅' },
+      { callback_data: 'edit_purchase', text: 'Изменить ✏️' },
+    ]],
+  },
+}
 
 bot.command('start', async (ctx) => {
   log.info(ctx.message.from, 'Received command');
@@ -44,9 +56,8 @@ bot.on(message('voice'), async (ctx) => {
     return;
   }
 
-  await writePurchasesToDb(purchases);
-
-  await ctx.reply(generateExpensesMessage(purchases));
+  usersStates.setCurrentPurchases(id, purchases);
+  await ctx.reply(generateExpensesMessage(purchases), replyExtra);
 });
 
 bot.on(message('text'), async (ctx) => {
@@ -61,6 +72,7 @@ bot.on(message('text'), async (ctx) => {
   }
 
   const text = ctx.message.text
+
   const purchases = await getPurchase(text);
 
   if (!purchases.length) {
@@ -69,7 +81,19 @@ bot.on(message('text'), async (ctx) => {
     return;
   }
 
-  await writePurchasesToDb(purchases);
+  usersStates.setCurrentPurchases(id, purchases);
+  await ctx.reply(generateExpensesMessage(purchases), replyExtra);
+});
 
-  await ctx.reply(generateExpensesMessage(purchases));
+bot.action('add_purchase', async (ctx) => {
+  const { id } = ctx.update.callback_query.from;
+  const currentPurchases = usersStates.getCurrentPurchases(id);
+
+  await writePurchasesToDb(currentPurchases);
+
+  await ctx.editMessageText(generateExpensesMessage(currentPurchases, false));
+});
+
+bot.action('edit_purchase', async (ctx) => {
+  await ctx.editMessageText('Пришли покупку еще раз');
 });
