@@ -59,10 +59,14 @@ bot.command('today', async (ctx) => {
     count, totalAmount, categories,
   } = await getPurchasesByDate();
 
-  await ctx.reply(`Сегодня было *${count}* покупок общей стоимостью *${replaceThousands(totalAmount)}₸*
+  if (categories.length > 0) {
+    await ctx.reply(`Сегодня было *${count}* покупок общей стоимостью *${replaceThousands(totalAmount)}₸*
   \nСводка по категориям:\n${
-    Object.keys(categories).map((c: any) => `- *${c}*: ${replaceThousands(categories[c].amount)}₸`).join(('\n'))
-  }`, replyForReport);
+      Object.keys(categories).map((c: any) => `- *${c}*: ${replaceThousands(categories[c].amount)}₸`).join(('\n'))
+    }`, replyForReport);
+  } else {
+   await ctx.reply('Сегодня еще не было покупок');
+  }
 });
 
 bot.on(message('voice'), async (ctx) => {
