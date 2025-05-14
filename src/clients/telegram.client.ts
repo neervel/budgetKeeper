@@ -4,12 +4,12 @@ import { message } from 'telegraf/filters';
 import { log } from '../utils/logger';
 import { getPurchase } from './openAi.client';
 import { generateExpensesMessage } from '../utils/generateExpensesMessage';
-import { writePurchasesToDb } from './notion.client';
+import { getPurchasesByDate, writePurchasesToDb } from './notion.client';
 import { parseAudioMessage } from '../utils/parseAudioMessage';
 import { checkAllowedChat } from '../utils/checkAllowedChat';
-import { callback } from 'telegraf/typings/button';
 import { usersStates } from '../tools/usersStates';
-import { channel } from 'node:diagnostics_channel';
+import { replaceThousands } from '../utils/replaceThousands';
+import { ParseMode } from 'telegraf/typings/core/types/typegram';
 
 export const bot = new Telegraf(telegramConfig.token);
 
@@ -20,7 +20,16 @@ const replyExtra = {
       { callback_data: 'edit_purchase', text: 'Изменить ✏️' },
     ]],
   },
-}
+};
+
+const replyForReport = {
+  reply_markup: {
+    inline_keyboard: [[
+      { callback_data: 'detailed_report', text: 'Подробный отчет 💸' },
+    ]]
+  },
+  parse_mode: 'Markdown' as ParseMode,
+};
 
 bot.command('start', async (ctx) => {
   log.info(ctx.message.from, 'Received command');
@@ -34,6 +43,26 @@ bot.command('start', async (ctx) => {
   }
 
   await ctx.reply('Привет 👋\nЧтобы добавить покупку пришли мне голосовое или текст');
+});
+
+bot.command('today', async (ctx) => {
+  const { id } = ctx.message.from;
+
+  if (!checkAllowedChat(id)) {
+    log.warn(`Not authorized user ${id}`);
+    await ctx.reply('Извините, вы не авторизованы');
+
+    return;
+  }
+
+  const {
+    count, totalAmount, categories,
+  } = await getPurchasesByDate();
+
+  await ctx.reply(`Сегодня было *${count}* покупок общей стоимостью *${replaceThousands(totalAmount)}₸*
+  \nСводка по категориям:\n${
+    Object.keys(categories).map((c: any) => `- *${c}*: ${replaceThousands(categories[c].amount)}₸`).join(('\n'))
+  }`, replyForReport);
 });
 
 bot.on(message('voice'), async (ctx) => {
@@ -97,3 +126,16 @@ bot.action('add_purchase', async (ctx) => {
 bot.action('edit_purchase', async (ctx) => {
   await ctx.editMessageText('Пришли покупку еще раз');
 });
+
+bot.action('detailed_report', async (ctx) => {
+  const {
+    count, totalAmount, categories,
+  } = await getPurchasesByDate();
+
+  await ctx.editMessageText(`Сегодня было ${count} покупок общей стоимостью ${replaceThousands(totalAmount)}₸\n\n${
+    Object.keys(categories).map((category: any) => 
+      `*${category} (${replaceThousands(categories[category].amount)}₸):*\n${
+      categories[category].purchases.map((p: any) => `- ${p.name} - ${replaceThousands(p.amount)}₸`).join('\n')
+    }`).join('\n\n')
+  }`, { parse_mode: 'Markdown' });
+})

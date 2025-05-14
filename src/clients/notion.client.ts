@@ -57,4 +57,47 @@ export const writePurchasesToDb = async (purchases: any[]) => {
   await Promise.all(
     purchases.map(async (purchase) => await writePurchase(purchase)),
   );
+};
+
+export const getPurchasesByDate = async (date = dayjs()): Promise<any> => {
+  const purchases = await notionClient.databases.query({
+    database_id: notionConfig.databaseId,
+    filter: {
+      property: 'Дата',
+      date: {
+        equals: date.format('YYYY-MM-DD'),
+      },
+    },
+    sorts: [{
+      property: 'Категория',
+      direction: 'ascending',
+    }],
+  })
+    .then((response) => response.results.map((result: any) => ({
+      amount: result.properties['Стоимость'].number,
+      category: result.properties['Категория'].select.name,
+      name: result.properties['Описание'].title[0].text.content,
+    })));
+
+  const count = purchases.length;
+  let totalAmount = 0;
+  const categories: any = {};
+
+  purchases.forEach((purchase) => {
+    const { amount, category } = purchase;
+
+    totalAmount += amount;
+
+    if (!categories[category]) {
+      categories[category] = {
+        amount: 0,
+        purchases: [],
+      };
+    }
+
+    categories[category].amount += amount;
+    categories[category].purchases.push(purchase);
+  });
+
+  return { count, totalAmount, categories };
 }
