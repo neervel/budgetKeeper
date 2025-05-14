@@ -59,10 +59,10 @@ bot.command('today', async (ctx) => {
     count, totalAmount, categories,
   } = await getPurchasesByDate();
 
-  if (categories.length > 0) {
-    await ctx.reply(`Сегодня было *${count}* покупок общей стоимостью *${replaceThousands(totalAmount)}₸*
+  if (Object.keys(categories).length > 0) {
+    await ctx.reply(`Сегодня было *${count}* покупок стоимостью *${replaceThousands(totalAmount)}₸*
   \nСводка по категориям:\n${
-      Object.keys(categories).map((c: any) => `- *${c}*: ${replaceThousands(categories[c].amount)}₸`).join(('\n'))
+      Object.keys(categories).map((c: any) => `• *${c}*: ${replaceThousands(categories[c].amount)}₸`).join(('\n'))
     }`, replyForReport);
   } else {
    await ctx.reply('Сегодня еще не было покупок');
@@ -136,10 +136,10 @@ bot.action('detailed_report', async (ctx) => {
     count, totalAmount, categories,
   } = await getPurchasesByDate();
 
-  await ctx.editMessageText(`Сегодня было ${count} покупок общей стоимостью ${replaceThousands(totalAmount)}₸\n\n${
+  await ctx.editMessageText(`Сегодня было *${count}* покупок стоимостью *${replaceThousands(totalAmount)}₸*\n\n${
     Object.keys(categories).map((category: any) => 
       `*${category} (${replaceThousands(categories[category].amount)}₸):*\n${
-      categories[category].purchases.map((p: any) => `- ${p.name} - ${replaceThousands(p.amount)}₸`).join('\n')
+      categories[category].purchases.map((p: any) => `• ${p.name} - ${replaceThousands(p.amount)}₸`).join('\n')
     }`).join('\n\n')
   }`, { parse_mode: 'Markdown' });
 })
